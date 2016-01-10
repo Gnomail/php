@@ -3,14 +3,27 @@ require(LIB_PATH.'Controller'.EXT);
 class IndexController extends Controller{
   public function Index()
   {
-    $sql = 'select * from mkt_user';
-    $result = M()->query($sql);
-    print_r($result);
+    $a = M('User')->count();
+    print_r($a);
   }
 
-  public function Welcome()
+  public function add()
   {
-    $this->assign('name','Gnomail');
-    $this->display();
+    $s = microtime(true);
+    $bigData = array();
+    for($i=0;$i<100;$i++)
+    {
+      $name = ucfirst(getRandStr(4,'letter'));
+      $age  = getRandStr(2,'number');
+      $data = array(
+        'name' => $name,
+        'age'  => $age
+      );
+      array_push($bigData,$data);
+    }
+    $addAll = M('User')->addAll($bigData);
+    $e = microtime(true);
+    var_dump($addAll);
+    var_dump($e-$s);
   }
 }

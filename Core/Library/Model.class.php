@@ -12,6 +12,9 @@ class Model{
   protected $connection;
 
   protected $data;
+  protected $field;
+  protected $where;
+  protected $group;
   protected $sql;
 
   public function __construct($table='',$prefix='',$db='')
@@ -40,10 +43,86 @@ class Model{
 
   }
 
+  protected function getPK()
+  {
+    $this->sql  = 'DESC '.$this->table;
+    $desc = $this->query();
+    if(!empty($desc))
+    {
+      foreach($desc as $v)
+      {
+        if($v['Key']=='PRI')
+        {
+          return $v['Field'];
+          break;
+        }
+      }
+    }
+    return false;
+  }
+
+  public function query($sql='')
+  {
+    if(!empty($sql))
+    {
+      $this->sql = $sql;
+    }
+
+    $query = mysql_query($this->sql);
+    if(is_resource($query))
+    {
+      $result = array();
+      while($row=mysql_fetch_assoc($query))
+      {
+        array_push($result,$row);
+      }
+      return $result;
+    }
+    return $query;
+  }
+
   public function data($data)
   {
     $this->data = $data;
     return $this;
+  }
+  public function group($group)
+  {
+    $pattern = '/group.*by/';
+    $group   = trim(preg_replace($pattern,'',$group));
+    if(!empty($group))
+    {
+        $this->group = ' GROUP BY '.$group;
+    }
+    return $this;
+  }
+  public function field($field='')
+  {
+    if(empty($field))
+    {
+      $this->field = '*';
+    }
+    else
+    {
+        if(!is_array($field))
+        {
+          $field = explode(',',$field);
+        }
+        $this->field = "`".implode("`,`",$field)."`";
+    }
+    return $this;
+  }
+
+  public function where($where='')
+  {
+    if(is_array($where))
+    {
+      $whereArr = array();
+      foreach($where as $k=>$v)
+      {
+
+      }
+    }
   }
 
   public function add($data=array())
@@ -108,24 +187,34 @@ class Model{
     }
   }
 
-  public function query($sql='')
+  public function delete($ids='')
   {
-    if(!empty($sql))
+    $pk = $this->getPK();
+    if(empty($pk))
     {
-      $this->sql = $sql;
+      return false;
     }
+    //计算删除了几条数据
+    $beforeCount  = $this->count();
+    $this->sql    = 'DELETE FROM `'.$this->table.'` where `'.$pk.'` in ('.$ids.')';
+    $delete       = $this->query();
+    if($delete)
+    {
+        $afterCount   = $this->count();
+        return $beforeCount - $afterCount;
+    }
+    return false;
+  }
 
-    $query = mysql_query($this->sql);
-    if(is_resource($query))
+  public function count()
+  {
+    $this->sql = 'SELECT COUNT(*) as my_count FROM `'.$this->table.'` '.$this->where.$this->group;
+    $count     = $this->query();
+    if(!empty($count))
     {
-      $result = array();
-      while($row=mysql_fetch_assoc($query))
-      {
-        array_push($result,$row);
-      }
-      return $result;
+      return intval($count[0]['my_count']);
     }
-    return $query;
+    return false;
   }
 
   public function find($sql)
